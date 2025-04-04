@@ -1,0 +1,19 @@
+# Entorn virtual
+venv/
+.env
+__pycache__/
+*.pyc
+
+# Fitxers temporals o d'edició
+*.log
+*.DS_Store
+.ipynb_checkpoints/
+*.swp
+
+# Fitxers d'exportació
+*.csv
+*.xlsx
+
+# Fitxers de sistema
+.idea/
+.vscode/
