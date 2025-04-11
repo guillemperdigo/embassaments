@@ -11,17 +11,12 @@ import requests
 import pandas as pd
 from tqdm import tqdm
 from dotenv import load_dotenv
+import smtplib
+import ssl
 import os
 
 load_dotenv()  # carrega variables des de .env
 
-account_sid = os.getenv("TWILIO_ACCOUNT_SID")
-auth_token = os.getenv("TWILIO_AUTH_TOKEN")
-to_number = os.getenv("TWILIO_TO")
-from_number = os.getenv("TWILIO_FROM")
-
-if not all([account_sid, auth_token, from_number, to_number]):
-    raise ValueError("Falten variables d'entorn al fitxer .env")
 
 
 # --- 1. Obtenir el catàleg de sensors ---
@@ -103,27 +98,33 @@ print(f"\n💧 Volum total embassat: {volum_total:.2f} hm³")
 print(f"📦 Capacitat total combinada: {capacitat_total:.2f} hm³")
 print(f"📊 % total embassat: {percentatge_total:.1f}%")
 
+# --- 9. Enviar per correu electrònic ---
 
-from twilio.rest import Client
+# Credencials i configuració del correu electrònic
+sender_email = os.getenv("SENDER_EMAIL")  # Utilitza una variable d'entorn per l'email del remitent
+sender_password = os.getenv("SENDER_PASSWORD")  # Utilitza una variable d'entorn per la contrasenya
+receiver_email = os.getenv("RECIPIENT_EMAIL")  # Utilitza una variable d'entorn per l'email del destinatari
 
-# Twilio config
-client = Client(account_sid, auth_token)
+if not all([sender_email, sender_password, receiver_email]):
+    raise ValueError("Falten variables d'entorn per a l'enviament de correu electrònic al fitxer .env")
 
-# Número de destí (el teu) i de Twilio sandbox
-to_numbers = os.getenv("TWILIO_TO", "").split(",")  # crea una llista
-from_number = os.getenv("TWILIO_FROM")
+# Crea el missatge
+subject = "Informació Embassaments"
+body = f"""
+💧 Volum total embassat: {volum_total:.2f} hm³
+📦 Capacitat total: {capacitat_total:.2f} hm³
+📊 Percentatge total embassat: {percentatge_total:.1f}%
+"""
+message = f"Subject: {subject}\n\n{body}"
 
-# Missatge
-missatge = (
-    f"💧 Volum total embassat: {volum_total:.2f} hm³\n"
-    f"📦 Capacitat total: {capacitat_total:.2f} hm³\n"
-    f"📊 Percentatge total embassat: {percentatge_total:.1f}%"
-)
+# Crea un context SSL segur
+context = ssl.create_default_context()
 
-# Enviament
-for to_number in to_numbers:
-    client.messages.create(
-        body=missatge,
-        from_=from_number,
-        to=to_number.strip()
-    )
+# Intenta enviar el correu electrònic
+try:
+    with smtplib.SMTP_SSL("smtp.gmail.com", 465, context=context) as server:
+        server.login(sender_email, sender_password)
+        server.sendmail(sender_email, receiver_email, message)
+    print("Correu electrònic enviat correctament!")
+except Exception as e:
+    print(f"Error en enviar el correu electrònic: {e}")
